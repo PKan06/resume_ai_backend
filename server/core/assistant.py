@@ -50,7 +50,7 @@ class FastAPIPersonalAssistant:
         self.user_state = {
             "last_seen": None,
             "conversation_count": 0,
-            "last_intent": None
+            "last_intent": None,
         }
 
         self._initialize_system()
@@ -58,12 +58,12 @@ class FastAPIPersonalAssistant:
     def _initialize_system(self):
 
         processor = DocumentProcessor(self.pdf_path)
-        
+
         # 🔥 RAW docs for profile extraction (unsplit, unenriched)
         raw_documents = processor.load_raw()
 
         # 🔥 Processed docs for RAG (split + enriched)
-        
+
         self.documents = processor.load_and_process()
 
         extractor = ProfileExtractor(raw_documents)
@@ -72,37 +72,34 @@ class FastAPIPersonalAssistant:
         self.vector_manager = VectorStoreManager(self.documents)
         self.retriever = self.vector_manager.get_retriever()
 
-        self.rag_chain = RagChain(
-            self.retriever,
-            self.assistant_name,
-            self.person_name
-        )
+        self.rag_chain = RagChain(self.retriever, self.assistant_name, self.person_name)
 
         # 🔥 embedding model
         self.embedding_model = EmbeddingService.get_instance()
-        
-        # 🔥 Redis client (Upstash — no persistent connection, HTTP-based)       
-        
+
+        # 🔥 Redis client (Upstash — no persistent connection, HTTP-based)
+
         redis_client = redis.Redis(
             host=settings.REDIS_HOST,
             port=settings.REDIS_PORT,
             password=settings.REDIS_PASSWORD,
             db=0,
             decode_responses=True,
-            ssl=False  # Redis Cloud requires TLS
+            ssl=False,  # Redis Cloud requires TLS
         )
-        
+
         # 🔥 cache service
         self.semantic_cache = SemanticCache(
             self.embedding_model,
             redis_client=redis_client,
             max_size=500,
             ttl=300,
-            threshold=0.85)
+            threshold=0.85,
+        )
 
         # 🔥 evaluator for dynamic thresholding and cache management
         self.evaluator = RAGEvaluator(self.embedding_model)
-        
+
         logger.info("Assistant initialized successfully")
 
     # 🔥 sync → async bridge
@@ -111,8 +108,6 @@ class FastAPIPersonalAssistant:
             yield token
             await asyncio.sleep(0)
 
-    
-    
     # 🔥 query normalization SO THAT TO HAVE SAME search question when to run the llm
     @traceable(name="normalize_query", run_type="llm")
     async def _normalize_query(self, question: str):
@@ -144,22 +139,19 @@ class FastAPIPersonalAssistant:
             return question
 
         return response.strip()
- 
+
     @traceable(name="routing_llm_parallel", run_type="llm")
     async def _route_query(self, question: str):
-        
         """
         this function does the following:
         1. starts query normalization in the background (async)
         2. checks cache with RAW question (fast path)
         3. waits for normalization to complete
         4. checks cache with normalized question (semantic path)
-        5. if still no cache hit, runs the routing LLM to classify the query    
+        5. if still no cache hit, runs the routing LLM to classify the query
         """
         # 🔥 STEP 1 — start normalization in background
-        normalize_task = asyncio.create_task(
-            self._normalize_query(question)
-        )
+        normalize_task = asyncio.create_task(self._normalize_query(question))
 
         # 🔥 STEP 2 — try cache with RAW question first (fast path)
         cached = self.semantic_cache.lookup(question)
@@ -225,7 +217,7 @@ class FastAPIPersonalAssistant:
             start = response.find("{")
             end = response.rfind("}")
             if start != -1 and end != -1:
-                response = response[start:end+1]
+                response = response[start : end + 1]
             else:
                 raise ValueError("No JSON found")
 
@@ -236,8 +228,7 @@ class FastAPIPersonalAssistant:
 
         result["_cache"] = False
         return result
-    
-    
+
     async def _retrieve_context_async(self, queries, qtype, requires):
 
         if not requires:
@@ -247,9 +238,7 @@ class FastAPIPersonalAssistant:
 
         def retrieve():
             try:
-                merged_query = " ".join([
-                    q for q in queries if q.strip() != "none"
-                ])
+                merged_query = " ".join([q for q in queries if q.strip() != "none"])
 
                 return self.vector_manager.get_relevant_documents(merged_query)
 
@@ -291,7 +280,7 @@ class FastAPIPersonalAssistant:
                 
                 Your response:
                 """
-                
+
         if qtype == "professional":
             return f"""
                 You are {self.assistant_name}, the personal AI assistant representing {self.person_name} to recruiters and professional contacts.
@@ -321,7 +310,7 @@ class FastAPIPersonalAssistant:
                 
                 Your response:
                 """
-        
+
         if qtype == "general":
             return f"""
                 You are {self.assistant_name}, the personal AI assistant for {self.person_name}.
@@ -348,7 +337,7 @@ class FastAPIPersonalAssistant:
                 
                 Your response:
                 """
-                
+
         if qtype == "out_of_scope":
             return f"""
                 You are {self.assistant_name}, the personal AI assistant for {self.person_name}.
@@ -371,7 +360,7 @@ class FastAPIPersonalAssistant:
                 
                 Your response:
                 """
-        
+
         # Fallback (should not reach here given routing, but safe default)
         return f"""
             You are {self.assistant_name}, personal assistant of {self.person_name}.
@@ -404,29 +393,27 @@ class FastAPIPersonalAssistant:
 
         try:
             async for token in self.rag_chain.llm.astream(
-                prompt,
-                config={"cancel_event": cancel_event}
+                prompt, config={"cancel_event": cancel_event}
             ):
 
                 if cancel_event.is_set():
                     # 🔥 HARD INTERRUPT
-                    logger.error("⚡ Interrupt signal received. Stopping stream.") 
+                    logger.error("⚡ Interrupt signal received. Stopping stream.")
                     yield "[DONE]\n\n"
                     return
-                
+
                 # 🔥 HANDLE RATE LIMIT SIGNAL
                 if token == "__RATE_LIMIT__":
                     yield "⚠️ The system is currently overloaded. Please try again shortly.\n\n"
                     yield "[DONE]\n\n"
                     return
 
-
                 yield token
                 await asyncio.sleep(0)
 
         except asyncio.CancelledError:
             # 🔥 IMPORTANT
-            logger.error("⚡ Streaming cancelled by client.") 
+            logger.error("⚡ Streaming cancelled by client.")
             yield "[DONE]\n\n"
             return
         except Exception as e:
@@ -434,13 +421,18 @@ class FastAPIPersonalAssistant:
             yield "⚠️ Something went wrong. Please try again.\n\n"
             yield "[DONE]\n\n"
 
+    def get_streaming_response_sync(self, question, cancel_event):
+        """
+        🔥 Sync wrapper for thread execution
+        """
+        return self.get_streaming_response(question, cancel_event)
 
     # 🚀 MAIN PIPELINE (SINGLE PASS)
     @traceable(name="single_pass_pipeline", run_type="llm")
     async def get_streaming_response(self, question, cancel_event):
-        try :     
+        try:
             route = await self._route_query(question)
-            
+
         except Exception as e:
 
             if str(e) == "RATE_LIMIT":
@@ -464,13 +456,15 @@ class FastAPIPersonalAssistant:
         # 🔥 EMIT CACHE META — frontend picks this up for per-bubble badge
         stats = self.semantic_cache.stats()
 
-        cache_meta = json.dumps({
-            "type": "cache",
-            "hit": cache_hit,
-            "stats": stats,
-            "threshold": self.semantic_cache.threshold,
-            "ttl": self.semantic_cache.ttl
-        })
+        cache_meta = json.dumps(
+            {
+                "type": "cache",
+                "hit": cache_hit,
+                "stats": stats,
+                "threshold": self.semantic_cache.threshold,
+                "ttl": self.semantic_cache.ttl,
+            }
+        )
 
         yield f"[META]{cache_meta}\n"
 
@@ -489,18 +483,15 @@ class FastAPIPersonalAssistant:
         # 🔥 STEP 2 — short wait (latency hiding)
         try:
             logger.info(f"📡 Retrieval started ")
-            context_text, context_chunks = await asyncio.wait_for(retrieve_task, timeout=0.8)
+            context_text, context_chunks = await asyncio.wait_for(
+                retrieve_task, timeout=0.8
+            )
         except asyncio.TimeoutError:
             context_text, context_chunks = await retrieve_task
 
         logger.info(f"📦 Retrieved chunks: {len(context_chunks)}")
         # 🔥 STEP 4 — full prompt
-        final_prompt = self._build_prompt(
-            question,
-            context_text,
-            qtype,
-            intent
-        )
+        final_prompt = self._build_prompt(question, context_text, qtype, intent)
         full_response = ""
 
         # 🔥 STEP 5 — continue streaming full answer
@@ -509,25 +500,20 @@ class FastAPIPersonalAssistant:
                 continue
             full_response += token
             yield f"{token}\n\n"
-            
+
         eval_input = {
-            "user_query": question,              # original
-            "retrieval_queries": queries, # or normalized
+            "user_query": question,  # original
+            "retrieval_queries": queries,  # or normalized
             "answer": full_response,
-            "context_chunks": context_chunks
+            "context_chunks": context_chunks,
         }
         eval_result = self.evaluator.evaluate(eval_input)
 
-        meta = {
-            "type": "rag_eval",
-            "data": eval_result
-        }
+        meta = {"type": "rag_eval", "data": eval_result}
 
         yield f"[META]{json.dumps(meta)}\n"
         yield "[DONE]\n\n"
-        
-        
-        
+
     def get_static_greeting(self) -> str:
         """A static greeting that doesn't rely on the time of day, for testing or fallback purposes."""
         return (
