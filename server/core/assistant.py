@@ -13,14 +13,11 @@ from server.config import settings
 
 from server.rag.document_processor import DocumentProcessor
 from server.rag.profile_extractor import ProfileExtractor
-from server.rag.vector_store import VectorStoreManager
 from server.rag.rag_chain import RagChain
 
 from server.services.embedding_service import EmbeddingService
 from server.services.rag_evaluator import RAGEvaluator
 
-from sklearn.metrics.pairwise import cosine_similarity
-import numpy as np
 
 logger = logging.getLogger(__name__)
 
@@ -69,33 +66,50 @@ class FastAPIPersonalAssistant:
         extractor = ProfileExtractor(raw_documents)
         self.person_name, self.person_profile = extractor.extract()
 
-        self.vector_manager = VectorStoreManager(self.documents)
-        self.retriever = self.vector_manager.get_retriever()
+        # 🔥 LAZY VECTOR STORE (CRITICAL FIX)
+        self.vector_manager = None
 
-        self.rag_chain = RagChain(self.retriever, self.assistant_name, self.person_name)
+        # retriever will be created dynamically when needed
+        self.retriever = None
+
+        self.rag_chain = RagChain(self.assistant_name, self.person_name)
 
         # 🔥 embedding model
         self.embedding_model = EmbeddingService.get_instance()
 
         # 🔥 Redis client (Upstash — no persistent connection, HTTP-based)
+        try:
+            redis_client = redis.Redis(
+                host=settings.REDIS_HOST,
+                port=settings.REDIS_PORT,
+                password=settings.REDIS_PASSWORD,
+                db=0,
+                decode_responses=True,
+                ssl=True,
+            )
 
-        redis_client = redis.Redis(
-            host=settings.REDIS_HOST,
-            port=settings.REDIS_PORT,
-            password=settings.REDIS_PASSWORD,
-            db=0,
-            decode_responses=True,
-            ssl=False,  # Redis Cloud requires TLS
-        )
+            # 🔥 semantic cache (THIS IS MISSING)
+            self.semantic_cache = SemanticCache(
+                embedding_model=self.embedding_model,
+                redis_client=redis_client,
+                max_size=500,
+                ttl=300,
+                threshold=0.85,
+            )
+            logger.info("✅ Semantic cache initialized")
+
+        except Exception as e:
+            logger.error(f"❌ Redis init failed: {e}")
+            self.semantic_cache = None
 
         # 🔥 cache service
-        self.semantic_cache = SemanticCache(
-            self.embedding_model,
-            redis_client=redis_client,
-            max_size=500,
-            ttl=300,
-            threshold=0.85,
-        )
+        """
+            ✔ small chunks (350)
+            ✔ overlap (80)
+            ✔ semantic tagging
+            ✔ natural language enrichment
+            ✔ clean text normalization
+        """
 
         # 🔥 evaluator for dynamic thresholding and cache management
         self.evaluator = RAGEvaluator(self.embedding_model)
@@ -154,7 +168,7 @@ class FastAPIPersonalAssistant:
         normalize_task = asyncio.create_task(self._normalize_query(question))
 
         # 🔥 STEP 2 — try cache with RAW question first (fast path)
-        cached = self.semantic_cache.lookup(question)
+        cached = self.semantic_cache.lookup(question) if self.semantic_cache else None
 
         if cached:
             logger.info("⚡ Cache HIT (raw query)")
@@ -167,7 +181,7 @@ class FastAPIPersonalAssistant:
         except asyncio.CancelledError:
             normalized = question
 
-        cached = self.semantic_cache.lookup(normalized)
+        cached = self.semantic_cache.lookup(normalized) if self.semantic_cache else None
         if cached:
             logger.info("⚡ Cache HIT (semantic)")
             return {**cached, "_cache": True}
@@ -238,22 +252,26 @@ class FastAPIPersonalAssistant:
 
         def retrieve():
             try:
-                merged_query = " ".join([q for q in queries if q.strip() != "none"])
+                if self.vector_manager is None:
+                    from server.rag.vector_store import VectorStoreManager
+                    self.vector_manager = VectorStoreManager(self.documents)
 
-                return self.vector_manager.get_relevant_documents(merged_query)
+                return self.vector_manager.get_relevant_documents(queries)
 
             except Exception as e:
                 logger.error(f"❌ Retrieval error: {str(e)}")
                 return []
 
-        chunks = await loop.run_in_executor(None, retrieve)
+        try:
+            chunks = await loop.run_in_executor(None, retrieve)
+        except Exception as e:
+            logger.error(f"❌ Async retrieval crash: {str(e)}")
+            return "", []
 
         if not chunks:
             logger.warning("⚠️ No chunks retrieved")
 
-        context_text = "\n\n".join(chunks)
-
-        return context_text, chunks
+        return "\n\n".join(chunks), chunks
 
     # 🔥 prompt builder
     def _build_prompt(self, question, context, qtype, intent):
@@ -480,13 +498,21 @@ class FastAPIPersonalAssistant:
             self._retrieve_context_async(queries, qtype, requires)
         )
 
-        # 🔥 STEP 2 — short wait (latency hiding)
+        # STEP 2 — send early token (VERY IMPORTANT)
+        yield "⏳ Fetching relevant information...\n\n"
+        await asyncio.sleep(0)
+        
+        logger.info("📡 Retrieval started")
+
         try:
-            logger.info(f"📡 Retrieval started ")
             context_text, context_chunks = await asyncio.wait_for(
-                retrieve_task, timeout=0.8
+                asyncio.shield(retrieve_task),  # 🔥 CRITICAL FIX
+                timeout=0.8
             )
         except asyncio.TimeoutError:
+            logger.warning("⏳ Retrieval timeout → waiting full result")
+            
+            # 🔥 SAFE: task is NOT cancelled now
             context_text, context_chunks = await retrieve_task
 
         logger.info(f"📦 Retrieved chunks: {len(context_chunks)}")

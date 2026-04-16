@@ -1,6 +1,6 @@
 # server/main.py
 from fastapi import FastAPI, Request
-from fastapi.concurrency import asynccontextmanager
+from contextlib import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, PlainTextResponse, FileResponse
 import asyncio
@@ -46,6 +46,15 @@ async def lifespan(app: FastAPI):
     )
 
     logger.info("✅ Assistant loaded")
+
+    def init_vector():
+        if assistant.vector_manager is None:
+            logger.info("⏳ Initializing vector store (lazy load)...")
+            from server.rag.vector_store import VectorStoreManager
+            assistant.vector_manager = VectorStoreManager(assistant.documents)
+
+    await asyncio.get_event_loop().run_in_executor(None, init_vector)
+    logger.info("✅ Vector store initialized")
     yield
 
 
@@ -100,18 +109,11 @@ async def chat(request: Request):
         first_token_sent = False
 
         try:
-            # 🔥 CRITICAL FIX — RUN PIPELINE IN THREAD
-            loop = asyncio.get_event_loop()
 
-            async def get_stream():
-                return await loop.run_in_executor(
-                    None,
-                    lambda: assistant.get_streaming_response_sync(
-                        question, session.cancel_event
-                    ),
-                )
-
-            stream_gen = await get_stream()
+            stream_gen = assistant.get_streaming_response(
+                question,
+                session.cancel_event
+            )
 
             async for chunk in stream_gen:
 
@@ -146,6 +148,9 @@ async def chat(request: Request):
                 logger.info(f"⚡ Request cancelled by user | session={session_id}")
             else:
                 logger.info(f"🔌 Stream torn down by infra | session={session_id}")
+                
+            # 🔥 ensure frontend gets something
+            yield "⚠️ Connection interrupted. Please try again.\n"
             yield "[DONE]\n"
 
         except Exception as e:
@@ -269,98 +274,6 @@ async def serve_resume():
     )
 
 
-
-# =========================
-# LOG STREAM — real time, optional level filter
-# /logs/stream              → all levels
-# /logs/stream?type=debug   → DEBUG and above
-# /logs/stream?type=info    → INFO and above
-# /logs/stream?type=warning → WARNING and above
-# /logs/stream?type=error   → ERROR and above
-# =========================
-@app.get("/logs/stream")
-async def stream_logs(type: str = "all"):
-    log_file = app_logger.LOG_FILE
-
-    if log_file is None or not log_file.exists():
-        return PlainTextResponse("No log file found.", status_code=404)
-
-    # 🔥 level filter map
-    LEVEL_MAP = {
-        "all": None,
-        "debug": "DEBUG",
-        "info": "INFO",
-        "warning": "WARNING",
-        "warn": "WARNING",
-        "error": "ERROR",
-        "critical": "CRITICAL",
-    }
-
-    LEVEL_ORDER = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
-
-    filter_level = LEVEL_MAP.get(type.lower())
-
-    def line_passes(line: str) -> bool:
-        """Returns True if line meets the minimum level filter."""
-        if filter_level is None:
-            return True
-        for lvl in LEVEL_ORDER[LEVEL_ORDER.index(filter_level) :]:
-            if f"| {lvl}" in line:
-                return True
-        return False
-
-    async def log_generator():
-        with open(log_file, "r", encoding="utf-8") as f:
-            # send full history first
-            for line in f:
-                if line.strip() and line_passes(line):
-                    yield f"data: {line.rstrip()}\n\n"
-
-            # then tail in real time
-            while True:
-                line = f.readline()
-                if line:
-                    if line.strip() and line_passes(line):
-                        yield f"data: {line.rstrip()}\n\n"
-                else:
-                    await asyncio.sleep(0.4)
-
-    return StreamingResponse(
-        log_generator(),
-        media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "X-Accel-Buffering": "no",
-        },
-    )
-
-
-# =========================
-# LOG DOWNLOAD
-# =========================
-@app.get("/logs/download")
-async def download_logs():
-    log_file = app_logger.LOG_FILE
-    if log_file is None or not log_file.exists():
-        return PlainTextResponse("No log file found.", status_code=404)
-    return FileResponse(str(log_file), media_type="text/plain", filename=log_file.name)
-
-
-# =========================
-# SERVE RESUME PDF
-# =========================
-
-
-@app.get("/resume")
-async def serve_resume():
-    pdf_path = "data/Tushar_Kankhedia_Resume.pdf"
-    if not os.path.exists(pdf_path):
-        return PlainTextResponse("Resume not found.", status_code=404)
-    return FileResponse(
-        pdf_path,
-        media_type="application/pdf",
-        headers={"Content-Disposition": "inline; filename=resume.pdf"},
-    )
 
 
 

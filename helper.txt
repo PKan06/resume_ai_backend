@@ -1,2 +1,60 @@
 # run command
 uvicorn server.main:app --reload --port 8000
+
+
+
+Using LangChain FOR:
+1. LLM abstraction: LangchainLLM()
+👉 shows:
+   - async usage
+   - streaming
+   - abstraction design
+2. Prompt templates (optional) : ChatPromptTemplate
+👉 shows:
+   - structured prompting
+   - maintainability
+3. Runnable / tracing : @traceable
+👉 shows:
+   - observability
+   - production thinking
+
+
+# ##############
+-> What multi-query does
+   Recall ↑ (finding relevant chunks)
+-> HYBRID RETRIEVAL (MULTI QUERY + MERGE)
+   Coverage ↑ (more relevant context candidates)
+-> MERGING + DEDUP (using set)
+   Token efficiency ↑
+   Context diversity ↑
+-> RERANKING (MOST IMPORTANT STEP)
+   Precision ↑ (very important)
+-> GOOD CHUNKING (VERY UNDERRATED)
+   Embedding quality ↑
+   Retrieval accuracy ↑
+
+-> Full Piepline (High recall + High precision = STRONG RAG)
+   Query
+   ↓
+   LLM expands intent
+   ↓
+   Multiple searches
+   ↓
+   Merge results
+   ↓
+   Rerank best chunks
+   ↓
+   LLM answers using strong context
+
+# ##############
+“I used LangChain as a foundation, but designed a custom retrieval pipeline for production-grade RAG.”
+“I implemented a Redis-backed semantic cache using embedding similarity to reduce redundant LLM calls.”
+Final Architecture :
+assistant.py → orchestration (custom)
+vector_store.py → retrieval engine (custom 🔥)
+rag_evaluator.py → metrics (custom 🔥)
+
+LangChain:
+    ├── LLM wrapper ✅
+    ├── tracing ✅
+    └── (optional) prompt templates

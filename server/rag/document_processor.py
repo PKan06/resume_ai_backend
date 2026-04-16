@@ -14,10 +14,23 @@ class DocumentProcessor:
 
     def __init__(self, pdf_path: str):
         self.pdf_path = pdf_path
-        
-        
+
+    # =========================
+    # 🔥 CLEAN FUNCTION (NEW)
+    # =========================
+    def _clean_text(self, text: str) -> str:
+        # remove hard line breaks
+        text = re.sub(r"\n+", " ", text)
+
+        # collapse multiple spaces
+        text = re.sub(r"\s+", " ", text)
+
+        # fix spacing before punctuation
+        text = re.sub(r"\s+([.,])", r"\1", text)
+
+        return text.strip()
+
     def load_raw(self) -> list[Document]:
-        """Load and clean docs WITHOUT splitting — for profile extraction."""
         if not os.path.exists(self.pdf_path):
             raise FileNotFoundError(f"Resume file not found: {self.pdf_path}")
 
@@ -26,7 +39,7 @@ class DocumentProcessor:
 
         cleaned_docs = []
         for d in docs:
-            text = re.sub(r"\s+", " ", d.page_content).strip()
+            text = self._clean_text(d.page_content)
             if text:
                 d.page_content = text
                 cleaned_docs.append(d)
@@ -46,38 +59,35 @@ class DocumentProcessor:
         # =========================
         cleaned_docs = []
         for d in docs:
-            text = re.sub(r"\s+", " ", d.page_content).strip()
+            text = self._clean_text(d.page_content)
             if text:
                 d.page_content = text
                 cleaned_docs.append(d)
 
         # =========================
-        # 🔥 MODERN SPLITTING (KEY CHANGE)
+        # SPLITTING
         # =========================
         splitter = RecursiveCharacterTextSplitter(
-            chunk_size=350,          # 🔥 smaller → sharper embeddings
+            chunk_size=350,
             chunk_overlap=80,
-            separators=[
-                "\n\n",
-                "\n",
-                ". ",
-                ", ",
-                " "
-            ]
+            separators=["\n\n", "\n", ". ", ", ", " "]
         )
 
         split_docs = splitter.split_documents(cleaned_docs)
 
         # =========================
-        # 🔥 CONTEXT ENRICHMENT
+        # ENRICHMENT (FIXED)
         # =========================
         enriched_docs = []
 
         for i, doc in enumerate(split_docs):
 
-            text = doc.page_content.lower()
+            # 🔥 CLEAN AGAIN AFTER SPLIT
+            clean_chunk = self._clean_text(doc.page_content)
 
-            # 🔥 semantic tagging
+            text = clean_chunk.lower()
+
+            # semantic tagging
             if "python" in text or "fastapi" in text:
                 section = "backend"
             elif "react" in text or "frontend" in text:
@@ -89,13 +99,11 @@ class DocumentProcessor:
             else:
                 section = "general"
 
-            # 🔥 KEY CHANGE → natural language prefix (NOT brackets)
-            enriched_text = f"""
-                This document contains information about the candidate's {section}.
-
-                Key details:
-                {doc.page_content}
-                """
+            # 🔥 FIXED (space added)
+            enriched_text = (
+                f"This section describes the candidate's {section}. "
+                f"{clean_chunk}"
+            )
 
             doc.page_content = enriched_text
             doc.metadata["section"] = section

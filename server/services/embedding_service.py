@@ -1,4 +1,3 @@
-from langchain_community.embeddings import HuggingFaceEmbeddings
 from server.config import settings
 
 
@@ -7,6 +6,11 @@ class EmbeddingService:
     _instance = None
 
     def __init__(self):
+        # =========================
+        # EMBEDDING MODEL (lazy import to avoid unnecessary overhead if not used)
+        # =========================
+        from langchain_community.embeddings import HuggingFaceEmbeddings 
+        
         self.model = HuggingFaceEmbeddings(
             model_name=settings.EMBEDDING_MODEL,
             model_kwargs={"device": settings.EMBEDDING_DEVICE},
