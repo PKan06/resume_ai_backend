@@ -26,36 +26,45 @@ assistant = None  # 🔥 lazy load
 
 
 # =========================
-# LIFESPAN (CRITICAL FIX)
+# 🔥 BACKGROUND LOADER (FIX)
+# =========================
+async def load_assistant():
+    global assistant
+
+    try:
+        logger.info("⏳ Loading assistant in background...")
+
+        loop = asyncio.get_event_loop()
+
+        assistant_instance = await loop.run_in_executor(
+            None,
+            lambda: FastAPIPersonalAssistant(
+                pdf_path=settings.PDF_PATH,
+                assistant_name=settings.ASSISTANT_NAME,
+                model_name=settings.MODEL_NAME,
+            ),
+        )
+
+        assistant = assistant_instance
+
+        logger.info("✅ Assistant loaded")
+
+    except Exception as e:
+        logger.error(f"❌ Assistant load failed: {str(e)}")
+
+
+# =========================
+# 🔥 LIFESPAN (NON-BLOCKING FIX)
 # =========================
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global assistant
-    logger.info("⏳ Loading assistant...")
+    logger.info("🚀 App starting...")
 
-    loop = asyncio.get_event_loop()
+    # 🔥 DO NOT BLOCK — run in background
+    asyncio.create_task(load_assistant())
 
-    # 🔥 load heavy models in background thread
-    assistant = await loop.run_in_executor(
-        None,
-        lambda: FastAPIPersonalAssistant(
-            pdf_path=settings.PDF_PATH,
-            assistant_name=settings.ASSISTANT_NAME,
-            model_name=settings.MODEL_NAME,
-        ),
-    )
-
-    logger.info("✅ Assistant loaded")
-
-    def init_vector():
-        if assistant.vector_manager is None:
-            logger.info("⏳ Initializing vector store (lazy load)...")
-            from server.rag.vector_store import VectorStoreManager
-            assistant.vector_manager = VectorStoreManager(assistant.documents)
-
-    await asyncio.get_event_loop().run_in_executor(None, init_vector)
-    logger.info("✅ Vector store initialized")
     yield
+
 
 
 app = FastAPI(lifespan=lifespan)
