@@ -12,6 +12,7 @@ import os
 from server.core.assistant import FastAPIPersonalAssistant
 from server.config import settings
 from server.core.session_manager import SessionManager
+from server.schemas.chat import ChatRequest
 import server.logger as app_logger
 from server.logger import setup_logging
 
@@ -85,7 +86,19 @@ app.add_middleware(
 # CHAT ENDPOINT
 # =========================
 @app.post("/chat")
-async def chat(request: Request):
+async def chat(payload: ChatRequest, request: Request):
+    question = payload.message.strip()
+    session_id = payload.session_id
+
+    if not question:
+        return StreamingResponse(
+            iter([
+                "You missed the most important part: the question. "
+                "Please type what you'd like to know.\n",
+                "[DONE]\n",
+            ]),
+            media_type="text/plain",
+        )
 
     # 🔥 guard while loading
     if assistant is None:
@@ -93,16 +106,6 @@ async def chat(request: Request):
             iter(["⏳ Assistant is still loading, please wait...\n", "[DONE]\n"]),
             media_type="text/plain",
         )
-
-    try:
-        body = await request.json()
-    except Exception:
-        return StreamingResponse(
-            iter(["❌ Invalid JSON request\n", "[DONE]\n"]), media_type="text/plain"
-        )
-
-    question = body.get("message", "").strip()
-    session_id = body.get("session_id", "default")
 
     logger.info(f"📩 Incoming request | session={session_id} | msg={question}")
 

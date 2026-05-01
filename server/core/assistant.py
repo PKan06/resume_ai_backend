@@ -86,7 +86,7 @@ class FastAPIPersonalAssistant:
                     password=settings.REDIS_PASSWORD,
                     db=0,
                     decode_responses=True,
-                    ssl=True,
+                    ssl=False,
                 )
 
                 self.semantic_cache = SemanticCache(
