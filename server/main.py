@@ -74,7 +74,7 @@ app = FastAPI(lifespan=lifespan)
 # =========================
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=settings.ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -273,7 +273,7 @@ async def download_logs():
 
 @app.get("/resume")
 async def serve_resume():
-    pdf_path = "data/Tushar_Kankhedia_Resume.pdf"
+    pdf_path = settings.PDF_PATH
     if not os.path.exists(pdf_path):
         return PlainTextResponse("Resume not found.", status_code=404)
     return FileResponse(

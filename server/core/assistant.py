@@ -78,28 +78,31 @@ class FastAPIPersonalAssistant:
         self.embedding_model = EmbeddingService.get_instance()
 
         # 🔥 Redis client (Upstash — no persistent connection, HTTP-based)
-        try:
-            redis_client = redis.Redis(
-                host=settings.REDIS_HOST,
-                port=settings.REDIS_PORT,
-                password=settings.REDIS_PASSWORD,
-                db=0,
-                decode_responses=True,
-                ssl=True,
-            )
+        if settings.REDIS_ENABLED:
+            try:
+                redis_client = redis.Redis(
+                    host=settings.REDIS_HOST,
+                    port=settings.REDIS_PORT,
+                    password=settings.REDIS_PASSWORD,
+                    db=0,
+                    decode_responses=True,
+                    ssl=True,
+                )
 
-            # 🔥 semantic cache (THIS IS MISSING)
-            self.semantic_cache = SemanticCache(
-                embedding_model=self.embedding_model,
-                redis_client=redis_client,
-                max_size=500,
-                ttl=300,
-                threshold=0.85,
-            )
-            logger.info("✅ Semantic cache initialized")
+                self.semantic_cache = SemanticCache(
+                    embedding_model=self.embedding_model,
+                    redis_client=redis_client,
+                    max_size=500,
+                    ttl=300,
+                    threshold=0.85,
+                )
+                logger.info("✅ Semantic cache initialized")
 
-        except Exception as e:
-            logger.error(f"❌ Redis init failed: {e}")
+            except Exception as e:
+                logger.error(f"❌ Redis init failed: {e}")
+                self.semantic_cache = None
+        else:
+            logger.info("ℹ️ Semantic cache disabled: REDIS_HOST not configured")
             self.semantic_cache = None
 
         # 🔥 cache service
@@ -237,8 +240,9 @@ class FastAPIPersonalAssistant:
 
         result = json.loads(response)
 
-        self.semantic_cache.store(normalized, result)
-        logger.info(f"Cache Stats: {self.semantic_cache.stats()}")
+        if self.semantic_cache:
+            self.semantic_cache.store(normalized, result)
+            logger.info(f"Cache Stats: {self.semantic_cache.stats()}")
 
         result["_cache"] = False
         return result
@@ -472,15 +476,22 @@ class FastAPIPersonalAssistant:
         cache_hit = route.get("_cache", False)
 
         # 🔥 EMIT CACHE META — frontend picks this up for per-bubble badge
-        stats = self.semantic_cache.stats()
+        stats = self.semantic_cache.stats() if self.semantic_cache else {
+            "enabled": False,
+            "size": 0,
+            "hits": 0,
+            "misses": 0,
+            "hit_rate": 0,
+            "memory_mb": 0.0,
+        }
 
         cache_meta = json.dumps(
             {
                 "type": "cache",
                 "hit": cache_hit,
                 "stats": stats,
-                "threshold": self.semantic_cache.threshold,
-                "ttl": self.semantic_cache.ttl,
+                "threshold": self.semantic_cache.threshold if self.semantic_cache else None,
+                "ttl": self.semantic_cache.ttl if self.semantic_cache else None,
             }
         )
 
