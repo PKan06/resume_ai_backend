@@ -2,7 +2,7 @@
 from fastapi import FastAPI, Request
 from contextlib import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse, PlainTextResponse, FileResponse
+from fastapi.responses import StreamingResponse, PlainTextResponse, FileResponse, JSONResponse
 import asyncio
 import logging
 import time
@@ -289,10 +289,41 @@ async def serve_resume():
 
 
 
-# =========================
-# HEALTH CHECK
-# =========================
-
 @app.get("/")
 async def health():
     return {"status": "ok"}
+
+
+# =========================
+# HEALTH / READINESS
+# =========================
+@app.get("/healthz")
+async def healthz():
+    return {
+        "status": "ok",
+        "service": "resume-ai-backend",
+    }
+
+
+@app.get("/readyz")
+async def readyz():
+    assistant_loaded = assistant is not None
+    resume_available = os.path.exists(settings.PDF_PATH)
+    cache_available = bool(
+        assistant_loaded and getattr(assistant, "semantic_cache", None)
+    )
+    ready = assistant_loaded and resume_available
+
+    payload = {
+        "status": "ready" if ready else "not_ready",
+        "assistant_loaded": assistant_loaded,
+        "resume_available": resume_available,
+        "model_name": settings.MODEL_NAME,
+        "cache_enabled": settings.REDIS_ENABLED,
+        "cache_available": cache_available,
+    }
+
+    return JSONResponse(
+        payload,
+        status_code=200 if ready else 503,
+    )
