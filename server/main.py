@@ -66,6 +66,11 @@ async def lifespan(app: FastAPI):
 
     yield
 
+    from server.services.embedding_service import EmbeddingService
+    if EmbeddingService._instance is not None:
+        EmbeddingService._instance.close()
+        logger.info("CloudflareEmbeddings HTTP client closed.")
+
 
 
 app = FastAPI(lifespan=lifespan)

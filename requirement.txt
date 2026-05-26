@@ -3,10 +3,9 @@ uvicorn
 websockets
 numpy
 scipy
-torch
+httpx
 openai
 faiss-cpu
-sentence-transformers
 python-dotenv
 
 langchain

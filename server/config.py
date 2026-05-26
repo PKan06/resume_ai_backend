@@ -3,8 +3,6 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# 🔥 IMPORTANT: Prevent HF tokenizer thread issues (Render fix)
-os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 class SettingsError(ValueError):
     """Raised when required application settings are missing or malformed."""
@@ -77,10 +75,15 @@ class Settings:
         # =========================
         self.MODEL_NAME = parser.get_required("MODEL_NAME")
         self.PDF_PATH = parser.get_required("PDF_PATH")
-        self.EMBEDDING_MODEL = parser.get_required("EMBEDDING_MODEL")
-        self.EMBEDDING_DEVICE = parser.get_optional(
-            "EMBEDDING_DEVICE",
-            default="cpu",
+
+        # =========================
+        # CLOUDFLARE CONFIG
+        # =========================
+        self.CLOUDFLARE_ACCOUNT_ID = parser.get_required("CLOUDFLARE_ACCOUNT_ID")
+        self.CLOUDFLARE_API_TOKEN = parser.get_required("CLOUDFLARE_API_TOKEN")
+        self.CLOUDFLARE_EMBEDDING_MODEL = parser.get_optional(
+            "CLOUDFLARE_EMBEDDING_MODEL",
+            default="@cf/baai/bge-small-en-v1.5",
         )
 
         # =========================

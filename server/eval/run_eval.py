@@ -150,7 +150,7 @@ def aggregate_results(results: list[dict]) -> dict:
 def config_snapshot() -> dict:
     return {
         "model_name": settings.MODEL_NAME,
-        "embedding_model": settings.EMBEDDING_MODEL,
+        "embedding_model": settings.CLOUDFLARE_EMBEDDING_MODEL,
         "retrieval_top_k": settings.RETRIEVAL_TOP_K,
         "rag_score_threshold": settings.RAG_SCORE_THRESHOLD,
         "redis_enabled": settings.REDIS_ENABLED,
