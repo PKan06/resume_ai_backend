@@ -17,3 +17,4 @@ pypdf
 google-genai
 
 redis
+scikit-learn
