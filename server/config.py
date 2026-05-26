@@ -87,6 +87,13 @@ class Settings:
         )
 
         # =========================
+        # PINECONE CONFIG
+        # =========================
+        self.PINECONE_API_KEY = parser.get_required("PINECONE_API_KEY")
+        self.PINECONE_INDEX_NAME = parser.get_optional("PINECONE_INDEX_NAME", default="resume-ai")
+        self.PINECONE_FORCE_REINDEX = parser.get_optional("PINECONE_FORCE_REINDEX", default="false")
+
+        # =========================
         # RETRIEVAL CONFIG
         # =========================
         self.RETRIEVAL_TOP_K = parser.get_int("RETRIEVAL_TOP_K", default=3)

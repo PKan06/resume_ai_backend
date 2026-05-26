@@ -10,48 +10,67 @@ class VectorStoreManager:
 
     def __init__(self, documents):
         self.documents = documents
-        self.db = None
-        self.embeddings = None
+        self.db = None          # sentinel: None = not ready, True = ready
+        self._index = None      # raw Pinecone Index object
+        self._embedding_service = None
 
     # =========================
-    # LAZY BUILD
+    # LAZY CONNECT / UPSERT
     # =========================
     def _build_db(self):
         if self.db is not None:
             return
 
-        logger.info("⚡ Building FAISS index (lazy init)...")
+        from pinecone import Pinecone
+        from server.services.embedding_service import EmbeddingService
+
+        logger.info("Connecting to Pinecone index '%s'...", settings.PINECONE_INDEX_NAME)
 
         try:
-            from server.services.embedding_service import EmbeddingService
-            from langchain_community.vectorstores import FAISS
+            pc = Pinecone(api_key=settings.PINECONE_API_KEY)
+            self._index = pc.Index(settings.PINECONE_INDEX_NAME)
+            self._embedding_service = EmbeddingService.get_instance()
 
-            self.embeddings = EmbeddingService.get_instance()
+            stats = self._index.describe_index_stats()
+            total = stats.get("total_vector_count", 0)
+            force = settings.PINECONE_FORCE_REINDEX.lower() == "true"
 
-            self.db = FAISS.from_documents(self.documents, self.embeddings)
+            if total == 0 or force:
+                self._upsert_documents()
+            else:
+                logger.info("Pinecone has %d vectors — reconnected (no upsert)", total)
 
-            logger.info("✅ FAISS ready")
+            self.db = True
 
         except Exception as e:
-            logger.error(f"❌ FAISS build failed: {str(e)}")
+            logger.error("Pinecone init failed: %s", str(e))
             raise
 
     # =========================
-    # SAFE RETRIEVER
+    # FIRST-TIME UPSERT
     # =========================
-    def get_retriever(self):
-        if self.db is None:
-            logger.info("⚡ Lazy building DB via retriever")
+    def _upsert_documents(self):
+        texts = [doc.page_content for doc in self.documents]
+        logger.info("Upserting %d chunks to Pinecone...", len(texts))
 
-        self._build_db()
+        vectors_data = self._embedding_service.embed_documents(texts)
 
-        return self.db.as_retriever(
-            search_type="similarity",
-            search_kwargs={"k": settings.RETRIEVAL_TOP_K}
-        )
+        batch_size = 100
+        for i in range(0, len(texts), batch_size):
+            batch = [
+                {
+                    "id": f"doc_{j}",
+                    "values": vectors_data[j],
+                    "metadata": {"text": texts[j]},
+                }
+                for j in range(i, min(i + batch_size, len(texts)))
+            ]
+            self._index.upsert(vectors=batch)
+
+        logger.info("Pinecone upsert complete (%d vectors)", len(texts))
 
     # =========================
-    # 🔥 MULTI-QUERY + FAISS SCORE BASED RANKING
+    # MULTI-QUERY RETRIEVAL
     # =========================
     def get_relevant_documents(self, queries, top_k=settings.RETRIEVAL_TOP_K):
         self._build_db()
@@ -61,27 +80,28 @@ class VectorStoreManager:
 
         all_results = []
 
-        # =========================
-        # 🔥 MULTI QUERY RETRIEVAL
-        # =========================
         for q in queries:
             try:
-                results = self.db.similarity_search_with_score(q, k=5)
-
-                for doc, score in results:
-                    # FAISS L2 → convert to similarity
-                    similarity = 1 / (1 + score)
-                    all_results.append((doc.page_content, similarity))
+                query_vector = self._embedding_service.embed_query(q)
+                response = self._index.query(
+                    vector=query_vector,
+                    top_k=5,
+                    include_metadata=True,
+                )
+                for match in response["matches"]:
+                    text = match["metadata"]["text"]
+                    score = match["score"]   # cosine similarity, 0–1 directly
+                    all_results.append((text, score))
 
             except Exception as e:
-                logger.error(f"❌ Retrieval failed for query '{q}': {str(e)}")
+                logger.error("Retrieval failed for query '%s': %s", q, str(e))
 
         if not all_results:
-            logger.warning("⚠️ No retrieval results")
+            logger.warning("No retrieval results")
             return []
 
         # =========================
-        # 🔥 DEDUP (ORDER PRESERVED)
+        # DEDUP (ORDER PRESERVED)
         # =========================
         unique_map = OrderedDict()
 
@@ -89,20 +109,19 @@ class VectorStoreManager:
             if text not in unique_map:
                 unique_map[text] = score
             else:
-                # keep best score
                 unique_map[text] = max(unique_map[text], score)
 
         # =========================
-        # 🔥 SORT BY SCORE
+        # SORT BY SCORE
         # =========================
         ranked = sorted(
             unique_map.items(),
             key=lambda x: x[1],
-            reverse=True
+            reverse=True,
         )
 
         # =========================
-        # 🔥 OPTIONAL THRESHOLD FILTER
+        # THRESHOLD FILTER
         # =========================
         threshold = getattr(settings, "RAG_SCORE_THRESHOLD", 0.35)
 
@@ -112,19 +131,19 @@ class VectorStoreManager:
             if score >= threshold
         ]
 
-        # fallback if too aggressive filtering
         if not filtered:
-            logger.warning("⚠️ Threshold removed all chunks → fallback to top results")
+            logger.warning("Threshold removed all chunks — fallback to top results")
             filtered = ranked[:top_k]
 
         # =========================
-        # 🔥 FINAL SELECTION
+        # FINAL SELECTION
         # =========================
         final_chunks = [text for text, _ in filtered[:top_k]]
 
         logger.info(
-            f"🎯 Selected chunks: {len(final_chunks)} | "
-            f"Top scores: {[round(s,3) for _,s in ranked[:5]]}"
+            "Selected chunks: %d | Top scores: %s",
+            len(final_chunks),
+            [round(s, 3) for _, s in ranked[:5]],
         )
 
         return final_chunks

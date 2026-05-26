@@ -5,7 +5,7 @@ numpy
 scipy
 httpx
 openai
-faiss-cpu
+pinecone
 python-dotenv
 
 langchain
