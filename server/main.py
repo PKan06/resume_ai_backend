@@ -186,6 +186,9 @@ async def chat(payload: ChatRequest, request: Request):
 async def greet():
 
     async def greeting_stream():
+        if assistant is None:
+            yield "⏳ Assistant is still loading, please wait...\n[DONE]\n"
+            return
         greeting = assistant.get_static_greeting()
 
         # stream character by character — fake typing effect
