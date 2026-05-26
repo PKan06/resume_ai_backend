@@ -60,4 +60,18 @@ LangChain:
     └── (optional) prompt templates
 
 
+Metrics: 
 
+Retrieval precision:
+fraction of retrieved chunks whose text contains at least one expected keyword or expected section marker.
+Context recall:
+fraction of expected keywords found across retrieved context.
+Section hit rate:
+fraction of expected sections found in retrieved context text.
+Latency:
+per-question latency and aggregate average/p95.
+Cache hit rate:
+count cache_hit=True across eval samples.
+Answer metrics:
+only when --generate-answers is enabled.
+use existing RAGEvaluator.evaluate(...) for answer relevance, faithfulness, hallucination label, and context score.

@@ -122,7 +122,7 @@ class Settings:
         # REDIS CONFIG (OPTIONAL)
         # =========================
         self.REDIS_HOST = parser.get_optional("REDIS_HOST")
-        self.REDIS_PORT = parser.get_int("REDIS_PORT")
+        self.REDIS_PORT = parser.get_int("REDIS_PORT", default=6379)
         self.REDIS_PASSWORD = parser.get_optional("REDIS_PASSWORD")
         self.REDIS_ENABLED = bool(self.REDIS_HOST)
 

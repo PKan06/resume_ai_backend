@@ -4,6 +4,7 @@ import logging
 import asyncio
 import json
 import datetime
+import time
 from collections import OrderedDict
 from langsmith import traceable
 import redis
@@ -448,6 +449,71 @@ class FastAPIPersonalAssistant:
         🔥 Sync wrapper for thread execution
         """
         return self.get_streaming_response(question, cancel_event)
+
+    async def run_eval_query(self, question: str, generate_answer: bool = False) -> dict:
+        start_time = time.perf_counter()
+        answer = ""
+        context_text = ""
+        context_chunks = []
+        eval_result = self.evaluator._empty()
+
+        try:
+            route = await self._route_query(question)
+            qtype = route["type"]
+            queries = route["queries"]
+            intent = route["intent"]
+            requires = route["requires_retrieval"]
+            cache_hit = route.get("_cache", False)
+
+            context_text, context_chunks = await self._retrieve_context_async(
+                queries,
+                qtype,
+                requires,
+            )
+
+            if generate_answer:
+                prompt = self._build_prompt(question, context_text, qtype, intent)
+                answer = await self.rag_chain.llm.ainvoke(prompt)
+                if answer == "__RATE_LIMIT__":
+                    answer = ""
+
+                eval_input = {
+                    "user_query": question,
+                    "retrieval_queries": queries,
+                    "answer": answer,
+                    "context_chunks": context_chunks,
+                }
+                eval_result = self.evaluator.evaluate(eval_input)
+
+            latency_ms = round((time.perf_counter() - start_time) * 1000, 2)
+
+            return {
+                "question": question,
+                "route_type": qtype,
+                "intent": intent,
+                "retrieval_queries": queries,
+                "context_chunks": context_chunks,
+                "answer": answer,
+                "cache_hit": cache_hit,
+                "latency_ms": latency_ms,
+                "rag_eval": eval_result,
+            }
+
+        except Exception as e:
+            latency_ms = round((time.perf_counter() - start_time) * 1000, 2)
+            logger.error(f"Eval query failed: {e}")
+            return {
+                "question": question,
+                "route_type": "error",
+                "intent": "",
+                "retrieval_queries": [],
+                "context_chunks": context_chunks,
+                "answer": answer,
+                "cache_hit": False,
+                "latency_ms": latency_ms,
+                "rag_eval": eval_result,
+                "error": str(e),
+            }
 
     # 🚀 MAIN PIPELINE (SINGLE PASS)
     @traceable(name="single_pass_pipeline", run_type="llm")

@@ -1,0 +1,356 @@
+[
+  {
+    "id": "skills_backend",
+    "question": "What backend skills does this candidate have?",
+    "expected_keywords": ["python", "fastapi", "api", "backend"],
+    "expected_sections": ["backend"]
+  },
+  {
+    "id": "skills_backend_v2",
+    "question": "Which server-side technologies and frameworks does this candidate know?",
+    "expected_keywords": ["python", "fastapi", "api", "backend"],
+    "expected_sections": ["backend"]
+  },
+  {
+    "id": "skills_backend_v3",
+    "question": "What programming languages and backend tools is this candidate proficient in?",
+    "expected_keywords": ["python", "django", "flask", "backend"],
+    "expected_sections": ["backend"]
+  },
+
+  {
+    "id": "python_skills",
+    "question": "How proficient is this candidate in Python?",
+    "expected_keywords": ["python", "backend", "programming"],
+    "expected_sections": ["backend"]
+  },
+  {
+    "id": "python_skills_v2",
+    "question": "What Python experience or expertise does this candidate have?",
+    "expected_keywords": ["python", "backend", "programming"],
+    "expected_sections": ["backend"]
+  },
+
+  {
+    "id": "flask_django",
+    "question": "Has this candidate worked with Flask or Django?",
+    "expected_keywords": ["flask", "django", "python", "backend"],
+    "expected_sections": ["backend"]
+  },
+  {
+    "id": "flask_django_v2",
+    "question": "What Python web framework experience does this candidate have — Flask or Django?",
+    "expected_keywords": ["flask", "django", "python", "backend"],
+    "expected_sections": ["backend"]
+  },
+
+  {
+    "id": "node_express",
+    "question": "Does this candidate have Node.js or Express.js experience?",
+    "expected_keywords": ["node", "express", "javascript", "backend"],
+    "expected_sections": ["backend"]
+  },
+  {
+    "id": "node_express_v2",
+    "question": "Has this candidate built backend services using Node.js?",
+    "expected_keywords": ["node", "express", "javascript", "backend"],
+    "expected_sections": ["backend"]
+  },
+
+  {
+    "id": "api_design",
+    "question": "Can this candidate design APIs?",
+    "expected_keywords": ["api", "rest", "fastapi", "endpoint", "backend"],
+    "expected_sections": ["backend"]
+  },
+  {
+    "id": "api_design_v2",
+    "question": "What is this candidate's experience building RESTful APIs?",
+    "expected_keywords": ["api", "rest", "restful", "endpoint"],
+    "expected_sections": ["backend"]
+  },
+  {
+    "id": "api_design_v3",
+    "question": "Has this candidate designed and implemented REST API endpoints?",
+    "expected_keywords": ["api", "rest", "endpoint", "backend"],
+    "expected_sections": ["backend"]
+  },
+
+  {
+    "id": "security",
+    "question": "What security practices or authentication mechanisms has this candidate implemented?",
+    "expected_keywords": ["jwt", "rbac", "authentication", "security", "role"],
+    "expected_sections": ["backend"]
+  },
+  {
+    "id": "security_v2",
+    "question": "Has this candidate worked with JWT authentication or role-based access control?",
+    "expected_keywords": ["jwt", "rbac", "authentication", "role", "access"],
+    "expected_sections": ["backend"]
+  },
+
+  {
+    "id": "databases",
+    "question": "What database or caching technologies has this candidate used?",
+    "expected_keywords": ["database", "redis", "sql", "mongodb", "cache"],
+    "expected_sections": ["backend"]
+  },
+  {
+    "id": "databases_v2",
+    "question": "What data storage or caching tools has this candidate worked with?",
+    "expected_keywords": ["database", "redis", "sql", "mongodb", "cache"],
+    "expected_sections": ["backend"]
+  },
+  {
+    "id": "databases_v3",
+    "question": "Which SQL and NoSQL databases does this candidate have experience with?",
+    "expected_keywords": ["mongodb", "postgresql", "mysql", "sql"],
+    "expected_sections": ["backend"]
+  },
+
+  {
+    "id": "redis",
+    "question": "Has this candidate used Redis for caching?",
+    "expected_keywords": ["redis", "cache", "caching"],
+    "expected_sections": ["backend"]
+  },
+  {
+    "id": "redis_v2",
+    "question": "What caching experience does this candidate have, specifically with Redis?",
+    "expected_keywords": ["redis", "cache", "caching"],
+    "expected_sections": ["backend"]
+  },
+
+  {
+    "id": "mongodb",
+    "question": "Does this candidate have MongoDB or NoSQL database experience?",
+    "expected_keywords": ["mongodb", "nosql", "database"],
+    "expected_sections": ["backend"]
+  },
+  {
+    "id": "mern_stack",
+    "question": "Has this candidate worked with the MERN stack?",
+    "expected_keywords": ["mongodb", "express", "react", "node", "mern"],
+    "expected_sections": ["project", "backend"]
+  },
+
+  {
+    "id": "frontend",
+    "question": "Does this candidate have frontend or React experience?",
+    "expected_keywords": ["react", "frontend", "javascript", "ui"],
+    "expected_sections": ["frontend"]
+  },
+  {
+    "id": "frontend_v2",
+    "question": "What UI technologies and frameworks has this candidate used?",
+    "expected_keywords": ["react", "redux", "bootstrap", "material-ui", "frontend"],
+    "expected_sections": ["frontend"]
+  },
+  {
+    "id": "frontend_v3",
+    "question": "Is this candidate skilled in React.js and modern frontend development?",
+    "expected_keywords": ["react", "javascript", "frontend", "ui"],
+    "expected_sections": ["frontend"]
+  },
+
+  {
+    "id": "react_redux",
+    "question": "Has this candidate used React with Redux for state management?",
+    "expected_keywords": ["react", "redux", "state", "frontend"],
+    "expected_sections": ["frontend"]
+  },
+  {
+    "id": "react_redux_v2",
+    "question": "What React ecosystem tools has this candidate worked with — Redux, MUI, Bootstrap?",
+    "expected_keywords": ["react", "redux", "material-ui", "bootstrap", "frontend"],
+    "expected_sections": ["frontend"]
+  },
+
+  {
+    "id": "data_viz",
+    "question": "Has this candidate worked on data visualization or analytics dashboards?",
+    "expected_keywords": ["chart", "dashboard", "analytics", "visualization"],
+    "expected_sections": ["frontend", "general"]
+  },
+  {
+    "id": "data_viz_v2",
+    "question": "What experience does this candidate have building reporting dashboards?",
+    "expected_keywords": ["dashboard", "analytics", "reporting", "chart"],
+    "expected_sections": ["frontend", "general"]
+  },
+
+  {
+    "id": "projects",
+    "question": "What projects has this candidate built?",
+    "expected_keywords": ["project", "built", "developed", "application"],
+    "expected_sections": ["project"]
+  },
+  {
+    "id": "projects_v2",
+    "question": "What software applications or systems has this candidate developed?",
+    "expected_keywords": ["project", "built", "developed", "application"],
+    "expected_sections": ["project"]
+  },
+  {
+    "id": "projects_v3",
+    "question": "Describe the personal projects listed on this candidate's resume.",
+    "expected_keywords": ["project", "smeet", "mynotebook", "personal"],
+    "expected_sections": ["project"]
+  },
+
+  {
+    "id": "smeet_project",
+    "question": "What is the SMeet project?",
+    "expected_keywords": ["smeet", "video", "agora", "real-time", "django"],
+    "expected_sections": ["project"]
+  },
+  {
+    "id": "smeet_project_v2",
+    "question": "Tell me about the real-time video chat application this candidate built.",
+    "expected_keywords": ["smeet", "video", "agora", "real-time", "chat"],
+    "expected_sections": ["project"]
+  },
+
+  {
+    "id": "mynotebook_project",
+    "question": "Tell me about the MyNotebook application.",
+    "expected_keywords": ["mynotebook", "mern", "mongodb", "note", "react"],
+    "expected_sections": ["project"]
+  },
+  {
+    "id": "mynotebook_project_v2",
+    "question": "What was the MyNotebook MERN stack project about?",
+    "expected_keywords": ["mynotebook", "mern", "mongodb", "note", "react"],
+    "expected_sections": ["project"]
+  },
+
+  {
+    "id": "realtime",
+    "question": "Does this candidate have experience with real-time systems or communication?",
+    "expected_keywords": ["real-time", "agora", "concurrent", "video"],
+    "expected_sections": ["project"]
+  },
+  {
+    "id": "realtime_v2",
+    "question": "Has this candidate used Agora SDK or built real-time video features?",
+    "expected_keywords": ["agora", "real-time", "video", "sdk"],
+    "expected_sections": ["project"]
+  },
+
+  {
+    "id": "deployment",
+    "question": "What deployment or production engineering experience is mentioned?",
+    "expected_keywords": ["deployment", "docker", "cloud", "production"],
+    "expected_sections": ["backend", "project"]
+  },
+  {
+    "id": "deployment_v2",
+    "question": "Has this candidate deployed applications to production environments using Docker?",
+    "expected_keywords": ["docker", "production", "deployment", "cloud"],
+    "expected_sections": ["backend", "project"]
+  },
+
+  {
+    "id": "ai_ml",
+    "question": "What AI or machine learning experience is shown?",
+    "expected_keywords": ["ai", "machine learning", "rag", "embedding", "llm"],
+    "expected_sections": ["general", "project"]
+  },
+  {
+    "id": "ai_ml_v2",
+    "question": "Does this candidate have experience with large language models or AI systems?",
+    "expected_keywords": ["ai", "machine learning", "rag", "embedding", "llm"],
+    "expected_sections": ["general", "project"]
+  },
+
+  {
+    "id": "education",
+    "question": "What is this candidate's education background?",
+    "expected_keywords": ["education", "degree", "college", "university"],
+    "expected_sections": ["education"]
+  },
+  {
+    "id": "education_v2",
+    "question": "Which university did this candidate attend and what did they study?",
+    "expected_keywords": ["iit", "jodhpur", "mechanical", "engineering", "btech"],
+    "expected_sections": ["education"]
+  },
+
+  {
+    "id": "iit",
+    "question": "Did this candidate graduate from IIT Jodhpur?",
+    "expected_keywords": ["iit", "jodhpur", "indian institute", "technology"],
+    "expected_sections": ["education"]
+  },
+  {
+    "id": "iit_v2",
+    "question": "What is this candidate's academic institution and degree?",
+    "expected_keywords": ["iit", "jodhpur", "btech", "mechanical", "engineering"],
+    "expected_sections": ["education"]
+  },
+
+  {
+    "id": "coursework",
+    "question": "What relevant coursework has this candidate completed?",
+    "expected_keywords": ["coursework", "python", "dsa", "data structures", "machine learning"],
+    "expected_sections": ["education"]
+  },
+  {
+    "id": "coursework_v2",
+    "question": "Has this candidate taken courses in machine learning, data science, or computer science?",
+    "expected_keywords": ["machine learning", "data science", "python", "coursework"],
+    "expected_sections": ["education"]
+  },
+
+  {
+    "id": "experience",
+    "question": "Summarize this candidate's professional experience.",
+    "expected_keywords": ["experience", "worked", "professional", "nebulaa"],
+    "expected_sections": ["general"]
+  },
+  {
+    "id": "experience_v2",
+    "question": "Give an overview of this candidate's work history and professional background.",
+    "expected_keywords": ["experience", "worked", "professional", "nebulaa"],
+    "expected_sections": ["general"]
+  },
+
+  {
+    "id": "current_role",
+    "question": "What is this candidate's current job role and company?",
+    "expected_keywords": ["nebulaa", "system engineer", "full stack", "hyderabad"],
+    "expected_sections": ["general"]
+  },
+  {
+    "id": "current_role_v2",
+    "question": "Where does this candidate currently work and what do they do?",
+    "expected_keywords": ["nebulaa", "system engineer", "full stack", "hyderabad"],
+    "expected_sections": ["general"]
+  },
+
+  {
+    "id": "strengths",
+    "question": "What are this candidate's strongest technical strengths?",
+    "expected_keywords": ["python", "backend", "project", "skills", "technical"],
+    "expected_sections": ["backend", "project"]
+  },
+  {
+    "id": "strengths_v2",
+    "question": "What makes this candidate stand out technically?",
+    "expected_keywords": ["python", "backend", "project", "skills", "technical"],
+    "expected_sections": ["backend", "project"]
+  },
+
+  {
+    "id": "achievements",
+    "question": "What certifications or achievements does this candidate have?",
+    "expected_keywords": ["hackerrank", "certificate", "gold", "badge", "python"],
+    "expected_sections": ["general"]
+  },
+  {
+    "id": "achievements_v2",
+    "question": "Has this candidate earned any HackerRank certifications or badges?",
+    "expected_keywords": ["hackerrank", "gold", "badge", "python", "certificate"],
+    "expected_sections": ["general"]
+  }
+]
