@@ -42,7 +42,7 @@ Using LangChain FOR:
    ↓
    Merge results
    ↓
-   Rerank best chunks
+   Rerank best chunks (score-based reranking)
    ↓
    LLM answers using strong context
 
@@ -75,3 +75,31 @@ count cache_hit=True across eval samples.
 Answer metrics:
 only when --generate-answers is enabled.
 use existing RAGEvaluator.evaluate(...) for answer relevance, faithfulness, hallucination label, and context score.
+
+
+
+# this is how vector_store.py works
+User question
+    │
+    ▼
+LLM generates 3 search queries
+    │
+    ├──► embed query 1 → Pinecone ANN → top 5 chunks + scores
+    ├──► embed query 2 → Pinecone ANN → top 5 chunks + scores
+    └──► embed query 3 → Pinecone ANN → top 5 chunks + scores
+                                              │
+                                              ▼
+                                    Dedup (15 → ~8 unique)
+                                    Keep max score per chunk
+                                              │
+                                              ▼
+                                    Sort by cosine score (desc)
+                                              │
+                                              ▼
+                                    Filter score ≥ 0.35
+                                              │
+                                              ▼
+                                    Take top 3 chunks
+                                              │
+                                              ▼
+                                    Pass to LLM as context
