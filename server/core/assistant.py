@@ -79,17 +79,20 @@ class FastAPIPersonalAssistant:
         self.embedding_model = EmbeddingService.get_instance()
 
         # 🔥 Redis client (Upstash — no persistent connection, HTTP-based)
-        if settings.REDIS_ENABLED:
+        if settings.REDIS_ENABLED and settings.REDIS_HOST:
             try:
                 redis_client = redis.Redis(
                     host=settings.REDIS_HOST,
                     port=settings.REDIS_PORT,
+                    username=settings.REDIS_USERNAME,
                     password=settings.REDIS_PASSWORD,
                     db=0,
                     decode_responses=True,
                     ssl=False,
                 )
-
+                
+                redis_client.ping()  # client is lazy; verify connectivity once at startup
+                
                 self.semantic_cache = SemanticCache(
                     embedding_model=self.embedding_model,
                     redis_client=redis_client,

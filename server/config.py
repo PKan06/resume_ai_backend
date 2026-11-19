@@ -1,7 +1,8 @@
 import os
 from dotenv import load_dotenv
+from pathlib import Path
 
-load_dotenv()
+load_dotenv(dotenv_path=Path(__file__).resolve().parent / ".env")
 
 
 class SettingsError(ValueError):
@@ -132,8 +133,9 @@ class Settings:
         # REDIS CONFIG (OPTIONAL)
         # =========================
         self.REDIS_HOST = parser.get_optional("REDIS_HOST")
-        self.REDIS_PORT = parser.get_int("REDIS_PORT", default=6379)
+        self.REDIS_PORT = parser.get_int("REDIS_PORT")
         self.REDIS_PASSWORD = parser.get_optional("REDIS_PASSWORD")
+        self.REDIS_USERNAME = parser.get_optional("REDIS_USERNAME")
         self.REDIS_ENABLED = bool(self.REDIS_HOST)
 
         # The current LLM adapter uses Gemini directly, so fail fast when it
