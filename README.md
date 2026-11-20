@@ -54,7 +54,7 @@ To build a **real-time, streaming AI assistant** that:
                         │
           ┌─────────────▼──────────────────────────────┐
           │           VectorStoreManager               │
-          │           (rag/vector_store.py)             │
+          │           (rag/helper/vector_store.py)     │
           │                                            │
           │  for each of 3 generated queries:          │
           │    1. embed_query()                        │
@@ -81,7 +81,7 @@ To build a **real-time, streaming AI assistant** that:
                         │ context chunks
                         ▼
           ┌─────────────────────────────────────────────┐
-          │              RagChain  (rag/rag_chain.py)    │
+          │   LangchainLLM  (llm/langchain_llm.py)       │
           │   Build prompt  →  LangchainLLM wrapper      │
           └─────────────┬───────────────────────────────┘
                         │
@@ -217,7 +217,6 @@ server/
 │
 ├── rag/
 │   ├── vector_store.py        # Pinecone connect/upsert/query
-│   ├── rag_chain.py           # Prompt construction + LLM call
 │   ├── document_processor.py  # PDF load, chunk, enrich
 │   └── profile_extractor.py   # Name/skills extraction from resume
 │

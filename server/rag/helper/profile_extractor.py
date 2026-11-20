@@ -1,4 +1,4 @@
-# server/rag/profile_extractor.py
+# server/rag/helper/profile_extractor.py
 import re
 from typing import List, Dict, Any
 
@@ -128,27 +128,3 @@ class ProfileExtractor:
                 return match.group(1).strip()[:300]
 
         return f"Experienced professional with expertise in {', '.join(self.person_profile.get('skills', [])[:5])}"
-
-    def classify_question(self, question: str) -> str:
-
-        question_lower = question.lower()
-
-        professional_keywords = [
-            'experience', 'skills', 'qualification', 'education', 'work',
-            'job', 'career', 'resume', 'cv', 'background', 'expertise',
-            'achievement', 'project', 'degree', 'university', 'company',
-            'position', 'role', 'responsibility', 'technology',
-            'programming', 'certification', 'award', 'accomplishment',
-            self.person_name.lower()
-        ]
-
-        if any(keyword in question_lower for keyword in professional_keywords):
-            return 'professional'
-
-        elif any(greeting in question_lower for greeting in [
-            'hello', 'hi', 'hey', 'good morning', 'good evening'
-        ]):
-            return 'greeting'
-
-        else:
-            return 'general'

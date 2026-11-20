@@ -1,10 +1,7 @@
 fastapi
 uvicorn
-websockets
 numpy
-scipy
 httpx
-openai
 pinecone
 python-dotenv
 
@@ -17,4 +14,3 @@ pypdf
 google-genai
 
 redis
-scikit-learn

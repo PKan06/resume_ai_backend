@@ -1,6 +1,6 @@
 # server/services/rag_evaluator.py
 import numpy as np
-from sklearn.metrics.pairwise import cosine_similarity
+from server.services.similarity import cosine_similarity
 import logging
 
 logger = logging.getLogger(__name__)

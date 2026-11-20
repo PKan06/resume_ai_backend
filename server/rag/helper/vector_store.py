@@ -1,4 +1,4 @@
-# server/rag/vector_store.py
+# server/rag/helper/vector_store.py
 import logging
 from collections import OrderedDict
 from server.config import settings
